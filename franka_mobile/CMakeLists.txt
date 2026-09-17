@@ -14,11 +14,14 @@ find_package(rclcpp REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(nav2_msgs REQUIRED)
 find_package(diff_drive_controller REQUIRED)
 find_package(generate_parameter_library REQUIRED)
 find_package(franka_semantic_components REQUIRED)
+find_package(franka_msgs REQUIRED)
 find_package(kdl_parser REQUIRED)
 find_package(realtime_tools REQUIRED)
 find_package(urdf REQUIRED)
@@ -59,11 +62,14 @@ ament_target_dependencies(
         rclcpp
         rclcpp_lifecycle
         tf2_msgs
+        tf2_ros
         nav_msgs
+        nav2_msgs
         geometry_msgs
         diff_drive_controller
         generate_parameter_library
         franka_semantic_components
+        franka_msgs
         realtime_tools
         kdl_parser
         urdf
@@ -80,6 +86,7 @@ install(
 
 install(PROGRAMS
   scripts/battery_server_node.py
+  scripts/nav2_relative_move_server_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

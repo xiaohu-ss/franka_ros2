@@ -212,6 +212,21 @@ def generate_robot_nodes(context):
         GroupAction(
             actions=[
                 SetRemap(src='cmd_vel', dst='swerve_drive_controller/cmd_vel'),
+                Node(
+                    package='franka_mobile',
+                    executable='nav2_relative_move_server_node.py',
+                    name='nav2_relative_move_server',
+                    namespace=namespace,
+                    output='screen',
+                    parameters=[
+                        {
+                            'target_frame': 'odom',
+                            'robot_base_frame': 'base_link',
+                            'navigate_to_pose_action': 'navigate_to_pose',
+                            'use_sim_time': use_sim_time,
+                        }
+                    ],
+                ),
                 IncludeLaunchDescription(
                     PythonLaunchDescriptionSource(
                         PathJoinSubstitution(
