@@ -30,17 +30,17 @@
         plugin: "dwb_core::DWBLocalPlanner"
         debug_trajectory_details: false
         min_vel_x: -0.35
-        max_vel_x: 0.35
+        max_vel_x: 0.05
         min_vel_y: -0.35
         max_vel_y: 0.35
         max_vel_theta: 0.5
         min_speed_xy: 0.0
         max_speed_xy: 0.35
         min_speed_theta: 0.0
-        acc_lim_x: 0.4
+        acc_lim_x: 0.05
         acc_lim_y: 0.4
         acc_lim_theta: 0.3
-        decel_lim_x: -0.4
+        decel_lim_x: -0.05
         decel_lim_y: -0.4
         decel_lim_theta: -0.3
         vx_samples: 20
