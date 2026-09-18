@@ -10,7 +10,6 @@
     ros__parameters:
       use_sim_time: false
       controller_frequency: 20.0
-      enable_stamped_cmd_vel: true
       odom_topic: swerve_drive_controller/odom
       progress_checker_plugins: ["progress_checker"]
       goal_checker_plugins: ["goal_checker"]

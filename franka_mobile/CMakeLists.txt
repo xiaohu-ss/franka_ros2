@@ -87,6 +87,7 @@ install(
 install(PROGRAMS
   scripts/battery_server_node.py
   scripts/nav2_relative_move_server_node.py
+  scripts/twist_to_twist_stamped_bridge_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

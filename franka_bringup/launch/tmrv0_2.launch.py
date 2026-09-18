@@ -211,7 +211,22 @@ def generate_robot_nodes(context):
     nodes.append(
         GroupAction(
             actions=[
-                SetRemap(src='cmd_vel', dst='swerve_drive_controller/cmd_vel'),
+                SetRemap(src='cmd_vel', dst='cmd_vel_nav'),
+                Node(
+                    package='franka_mobile',
+                    executable='twist_to_twist_stamped_bridge_node.py',
+                    name='twist_to_twist_stamped_bridge',
+                    namespace=namespace,
+                    output='screen',
+                    parameters=[
+                        {
+                            'input_topic': 'cmd_vel_nav',
+                            'output_topic': 'swerve_drive_controller/cmd_vel',
+                            'frame_id': 'base_link',
+                            'use_sim_time': use_sim_time,
+                        }
+                    ],
+                ),
                 Node(
                     package='franka_mobile',
                     executable='nav2_relative_move_server_node.py',
