@@ -259,3 +259,57 @@ For questions or support, please open an issue on the [GitHub Issues](https://gi
 See the [Franka Control Interface (FCI) documentation](https://frankarobotics.github.io/docs) for more information.
 
 [def]: #docker-container-installation
+
+## Set up
+
+1. link to franka tmr
+
+2. full compile or part compile
+```
+cd /home/tmr-user/ros2_ws
+source /opt/ros/humble/setup.bash
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF (part compile eg. colcon build --symlink-install --packages-select franka_bringup)
+source install/setup.bash
+```
+
+3. start the nav2 program
+```
+ros2 launch franka_bringup tmrv0_2.launch.py \
+  robot_config_file:=tmr.config.yaml \
+  controller_name:=swerve_drive_controller \
+  use_nav2:=true
+```
+4. call move service to move
+```
+ros2 service call /nav2_relative_move_server/relative_move \
+  franka_msgs/srv/Nav2RelativeMove \
+  "{forward_m: 0.10, left_m: 0.0, yaw_rad: 0.0}"
+```
+
+5. Q & A
+    1. when set up complete ,there is the following err:
+    ```
+        [ros2_control_node-2][ERROR][FrankaHardwareInterface]: libfranka: Move command aborted: motion aborted by reflex! ["communication_constraints_violoation"]
+    ```
+        It means the communication through one network card may cause unstable for the franka. Restart the shell again
+    
+    2. after "motion aborted by reflex!" error, there may cause TmrHardware and hardware_interfaces inactive. can be checked by 
+    ```
+    ros2 control list_hardware_components
+    ros2 control list_hardware_interfaces
+    ros2 control list_controllers
+    ```
+    solved by
+    ```
+    ros2 control set_hardware_component_state TmrHardware active
+    ros2 control switch_controllers --deactivate swerve_drive_controller
+    ros2 control switch_controllers --activate swerve_drive_controller
+    ```
+
+    3. some usefull topic msgs to check bug
+    ```
+    controller input:
+        ros2 topic echo /swerve_drive_controller/cmd_vel
+    controller output:
+        ros2 topic echo /swerve_drive_controller/cmd_vel_out
+    ```
