@@ -17,6 +17,7 @@
 from math import atan2, cos, sin
 from threading import Event
 
+from action_msgs.msg import GoalStatus
 from franka_msgs.srv import Nav2RelativeMove
 from nav2_msgs.action import NavigateToPose
 import rclpy
@@ -30,6 +31,7 @@ from tf2_ros import Buffer, TransformException, TransformListener
 
 DEFAULT_ACTION_WAIT_TIMEOUT = 5.0
 DEFAULT_GOAL_RESPONSE_TIMEOUT = 5.0
+DEFAULT_RESULT_TIMEOUT = 60.0
 DEFAULT_TF_LOOKUP_TIMEOUT = 1.0
 
 
@@ -48,6 +50,20 @@ def set_quaternion_from_yaw(quaternion, yaw: float) -> None:
     quaternion.w = cos(yaw * 0.5)
 
 
+def goal_status_to_string(status: int) -> str:
+    """Return a human-readable action goal status."""
+    status_names = {
+        GoalStatus.STATUS_UNKNOWN: 'UNKNOWN',
+        GoalStatus.STATUS_ACCEPTED: 'ACCEPTED',
+        GoalStatus.STATUS_EXECUTING: 'EXECUTING',
+        GoalStatus.STATUS_CANCELING: 'CANCELING',
+        GoalStatus.STATUS_SUCCEEDED: 'SUCCEEDED',
+        GoalStatus.STATUS_CANCELED: 'CANCELED',
+        GoalStatus.STATUS_ABORTED: 'ABORTED',
+    }
+    return status_names.get(status, f'UNKNOWN_STATUS_{status}')
+
+
 class Nav2RelativeMoveServer(Node):
     """Converts relative base-frame motion requests into Nav2 NavigateToPose goals."""
 
@@ -59,6 +75,7 @@ class Nav2RelativeMoveServer(Node):
         self.declare_parameter('navigate_to_pose_action', 'navigate_to_pose')
         self.declare_parameter('action_wait_timeout', DEFAULT_ACTION_WAIT_TIMEOUT)
         self.declare_parameter('goal_response_timeout', DEFAULT_GOAL_RESPONSE_TIMEOUT)
+        self.declare_parameter('result_timeout', DEFAULT_RESULT_TIMEOUT)
         self.declare_parameter('tf_lookup_timeout', DEFAULT_TF_LOOKUP_TIMEOUT)
 
         self.target_frame = self.get_parameter('target_frame').value
@@ -66,6 +83,7 @@ class Nav2RelativeMoveServer(Node):
         navigate_to_pose_action = self.get_parameter('navigate_to_pose_action').value
         self.action_wait_timeout = self.get_parameter('action_wait_timeout').value
         self.goal_response_timeout = self.get_parameter('goal_response_timeout').value
+        self.result_timeout = self.get_parameter('result_timeout').value
         self.tf_lookup_timeout = self.get_parameter('tf_lookup_timeout').value
 
         self.callback_group = ReentrantCallbackGroup()
@@ -150,14 +168,55 @@ class Nav2RelativeMoveServer(Node):
             response.message = 'NavigateToPose goal response was empty'
             return response
 
-        response.accepted = goal_handle.accepted
-        if goal_handle.accepted:
-            response.message = (
-                'NavigateToPose goal accepted: '
-                f'x={target_x:.3f}, y={target_y:.3f}, yaw={target_yaw:.3f}'
-            )
-        else:
+        if not goal_handle.accepted:
+            response.accepted = False
             response.message = 'NavigateToPose goal rejected'
+            return response
+
+        result_future = goal_handle.get_result_async()
+        result_event = Event()
+        result_future.add_done_callback(lambda _future: result_event.set())
+
+        if not result_event.wait(timeout=self.result_timeout):
+            response.accepted = False
+            response.message = (
+                'Timed out waiting for NavigateToPose result: '
+                f'timeout={self.result_timeout:.3f}s'
+            )
+            return response
+
+        result_response = result_future.result()
+        status = result_response.status
+        status_name = goal_status_to_string(status)
+
+        try:
+            final_transform = self.tf_buffer.lookup_transform(
+                self.target_frame,
+                self.robot_base_frame,
+                Time(),
+                timeout=Duration(seconds=self.tf_lookup_timeout),
+            )
+        except TransformException as exc:
+            response.accepted = False
+            response.message = (
+                'NavigateToPose finished, but failed to lookup final pose: '
+                f'status={status_name}, '
+                f'{self.target_frame} -> {self.robot_base_frame}: {exc}'
+            )
+            return response
+
+        final_translation = final_transform.transform.translation
+        final_rotation = final_transform.transform.rotation
+        final_yaw = yaw_from_quaternion(final_rotation)
+
+        response.accepted = status == GoalStatus.STATUS_SUCCEEDED
+        response.message = (
+            'NavigateToPose finished: '
+            f'status={status_name}, '
+            f'x={final_translation.x:.3f}, '
+            f'y={final_translation.y:.3f}, '
+            f'yaw={final_yaw:.3f}'
+        )
         return response
 
 
