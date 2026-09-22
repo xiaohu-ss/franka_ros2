@@ -9,7 +9,7 @@
   controller_server:
     ros__parameters:
       use_sim_time: false
-      controller_frequency: 10.0
+      controller_frequency: 20.0
       odom_topic: swerve_drive_controller/odom
       progress_checker_plugins: ["progress_checker"]
       goal_checker_plugins: ["goal_checker"]
@@ -22,35 +22,35 @@
 
       goal_checker:
         plugin: "nav2_controller::SimpleGoalChecker"
-        xy_goal_tolerance: 0.05
+        xy_goal_tolerance: 0.015
         yaw_goal_tolerance: 0.05
         stateful: true
 
       FollowPath:
         plugin: "dwb_core::DWBLocalPlanner"
         debug_trajectory_details: false
-        min_vel_x: -0.35
-        max_vel_x: 0.05
-        min_vel_y: -0.35
-        max_vel_y: 0.35
-        max_vel_theta: 0.5
+        min_vel_x: -0.10
+        max_vel_x: 0.10
+        min_vel_y: -0.10
+        max_vel_y: 0.10
+        max_vel_theta: 0.4
         min_speed_xy: 0.0
-        max_speed_xy: 0.35
+        max_speed_xy: 0.15
         min_speed_theta: 0.0
-        acc_lim_x: 0.05
-        acc_lim_y: 0.4
+        acc_lim_x: 0.3
+        acc_lim_y: 0.3
         acc_lim_theta: 0.3
-        decel_lim_x: -0.05
-        decel_lim_y: -0.4
+        decel_lim_x: -0.3
+        decel_lim_y: -0.3
         decel_lim_theta: -0.3
-        vx_samples: 20
-        vy_samples: 20
-        vtheta_samples: 20
-        sim_time: 1.0
+        vx_samples: 8
+        vy_samples: 8
+        vtheta_samples: 15
+        sim_time: 1.5
         linear_granularity: 0.05
-        angular_granularity: 0.025
+        angular_granularity: 0.05
         transform_tolerance: 0.2
-        xy_goal_tolerance: 0.05
+        xy_goal_tolerance: 0.015
         trans_stopped_velocity: 0.02
         short_circuit_trajectory_evaluation: true
         stateful: true
@@ -71,9 +71,14 @@
         GoalAlign.forward_point_distance: 0.1
         PathDist.scale: 32.0
         GoalDist.scale: 24.0
+        Oscillation.scale: 1.0
+        Oscillation.oscillation_reset_dist: 0.01
+        Oscillation.oscillation_reset_angle: 0.05
+        Oscillation.oscillation_reset_time: 1.0
+        Oscillation.x_only_threshold: 0.02
         RotateToGoal.scale: 32.0
-        RotateToGoal.slowing_factor: 5.0
-        RotateToGoal.lookahead_time: -1.0
+        RotateToGoal.slowing_factor: 15.0
+        RotateToGoal.lookahead_time: 0.5
 
   local_costmap:
     local_costmap:
@@ -118,7 +123,10 @@
       planner_plugins: ["GridBased"]
       GridBased:
         plugin: "nav2_navfn_planner/NavfnPlanner"
-        tolerance: 0.5
+        # One costmap cell. 0.0 makes NavFn fail outright on the very short
+        # paths this base is asked for; 0.5 let it end half a metre short of
+        # the goal, which the goal checker then accepted as "arrived".
+        tolerance: 0.05
         use_astar: false
         allow_unknown: true
 
@@ -173,14 +181,14 @@
       use_sim_time: false
       smoothing_frequency: 20.0
       scale_velocities: false
-      feedback: "OPEN_LOOP"
-      max_velocity: [0.35, 0.35, 0.5]
-      min_velocity: [-0.35, -0.35, -0.5]
-      max_accel: [0.4, 0.4, 0.3]
-      max_decel: [-0.4, -0.4, -0.3]
+      feedback: "CLOSED_LOOP"
+      max_velocity: [0.10, 0.10, 0.4]
+      min_velocity: [-0.10, -0.10, -0.4]
+      max_accel: [0.3, 0.3, 0.3]
+      max_decel: [-0.3, -0.3, -0.3]
       odom_topic: swerve_drive_controller/odom
       odom_duration: 0.1
-      deadband_velocity: [0.0, 0.0, 0.0]
+      deadband_velocity: [0.005, 0.005, 0.01]
       velocity_timeout: 1.0
 
   lifecycle_manager_navigation:

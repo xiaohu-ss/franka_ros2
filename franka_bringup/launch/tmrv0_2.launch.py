@@ -208,10 +208,52 @@ def generate_robot_nodes(context):
             )
         )
 
+    # Nav2's own launch file already remaps controller_server/behavior_server
+    # cmd_vel -> cmd_vel_nav and velocity_smoother cmd_vel_smoothed -> cmd_vel.
+    # The SetRemap below keeps that mapping in one place for the Nav2 group, and
+    # must NOT cover the bridge: remapping is applied to the topic name at
+    # subscription time, so a bridge inside this scope asking for 'cmd_vel'
+    # would silently be pushed back onto 'cmd_vel_nav', bypassing the smoother.
+    # Short relative moves are served by a closed-loop controller that talks to
+    # the base directly, so this node is useful with or without Nav2.
+    nodes.append(
+        Node(
+            package='franka_mobile',
+            executable='nav2_relative_move_server_node.py',
+            name='nav2_relative_move_server',
+            namespace=namespace,
+            output='screen',
+            parameters=[
+                {
+                    'target_frame': 'odom',
+                    'robot_base_frame': 'base_link',
+                    'navigate_to_pose_action': 'navigate_to_pose',
+                    'cmd_vel_topic': 'swerve_drive_controller/cmd_vel',
+                    'cmd_vel_frame': 'base_link',
+                    # Above this distance the move is handed to Nav2 instead.
+                    'closed_loop_max_distance': 0.5,
+                    'control_frequency': 50.0,
+                    'kp_xy': 1.5,
+                    'kp_yaw': 1.5,
+                    'max_vel_xy': 0.10,
+                    'max_vel_yaw': 0.4,
+                    'min_vel_xy': 0.015,
+                    'min_vel_yaw': 0.03,
+                    'max_accel_xy': 0.3,
+                    'max_accel_yaw': 0.3,
+                    'xy_tolerance': 0.01,
+                    'yaw_tolerance': 0.02,
+                    'settle_time': 0.3,
+                    'closed_loop_timeout': 30.0,
+                    'use_sim_time': use_sim_time,
+                }
+            ],
+        )
+    )
+
     nodes.append(
         GroupAction(
             actions=[
-                SetRemap(src='cmd_vel', dst='cmd_vel_nav'),
                 Node(
                     package='franka_mobile',
                     executable='twist_to_twist_stamped_bridge_node.py',
@@ -220,28 +262,23 @@ def generate_robot_nodes(context):
                     output='screen',
                     parameters=[
                         {
-                            'input_topic': 'cmd_vel_nav',
+                            # velocity_smoother output, not the raw DWB command
+                            'input_topic': 'cmd_vel',
                             'output_topic': 'swerve_drive_controller/cmd_vel',
                             'frame_id': 'base_link',
                             'use_sim_time': use_sim_time,
                         }
                     ],
                 ),
-                Node(
-                    package='franka_mobile',
-                    executable='nav2_relative_move_server_node.py',
-                    name='nav2_relative_move_server',
-                    namespace=namespace,
-                    output='screen',
-                    parameters=[
-                        {
-                            'target_frame': 'odom',
-                            'robot_base_frame': 'base_link',
-                            'navigate_to_pose_action': 'navigate_to_pose',
-                            'use_sim_time': use_sim_time,
-                        }
-                    ],
-                ),
+            ],
+            condition=IfCondition(use_nav2),
+        )
+    )
+
+    nodes.append(
+        GroupAction(
+            actions=[
+                SetRemap(src='cmd_vel', dst='cmd_vel_nav'),
                 IncludeLaunchDescription(
                     PythonLaunchDescriptionSource(
                         PathJoinSubstitution(
