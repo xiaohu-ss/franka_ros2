@@ -193,6 +193,18 @@ class Nav2RelativeMoveServer(Node):
         translation = transform.transform.translation
         return translation.x, translation.y, yaw_from_quaternion(transform.transform.rotation)
 
+    def _set_target_pose(self, response, target_x, target_y, target_yaw) -> None:
+        """Populate the target pose fields in a service response."""
+        response.target_x = target_x
+        response.target_y = target_y
+        response.target_yaw = target_yaw
+
+    def _set_final_pose(self, response, final_x, final_y, final_yaw) -> None:
+        """Populate the final pose fields in a service response."""
+        response.final_x = final_x
+        response.final_y = final_y
+        response.final_yaw = final_yaw
+
     def _publish_cmd(self, vx: float, vy: float, wz: float) -> None:
         """Publish one body-frame velocity command."""
         message = TwistStamped()
@@ -230,6 +242,10 @@ class Nav2RelativeMoveServer(Node):
             if time.monotonic() > deadline:
                 self._stop()
                 error_xy, error_yaw = self._pose_error(target_x, target_y, target_yaw)
+                try:
+                    self._set_final_pose(response, *self._lookup_pose())
+                except TransformException:
+                    pass
                 response.accepted = False
                 response.message = (
                     'Closed-loop move timed out: '
@@ -263,10 +279,10 @@ class Nav2RelativeMoveServer(Node):
                     in_tolerance_since = time.monotonic()
                 elif time.monotonic() - in_tolerance_since >= self.settle_time:
                     self._stop()
+                    self._set_final_pose(response, current_x, current_y, current_yaw)
                     response.accepted = True
                     response.message = (
                         'Closed-loop move finished: '
-                        f'x={current_x:.3f}, y={current_y:.3f}, yaw={current_yaw:.3f}, '
                         f'error_xy={distance:.4f}, error_yaw={error_yaw:.4f}'
                     )
                     return response
@@ -387,11 +403,11 @@ class Nav2RelativeMoveServer(Node):
             )
             return response
 
+        self._set_final_pose(response, final_x, final_y, final_yaw)
         response.accepted = status == GoalStatus.STATUS_SUCCEEDED
         response.message = (
             'NavigateToPose finished: '
-            f'status={status_name}, '
-            f'x={final_x:.3f}, y={final_y:.3f}, yaw={final_yaw:.3f}'
+            f'status={status_name}'
         )
         return response
 
@@ -424,6 +440,7 @@ class Nav2RelativeMoveServer(Node):
                 + cos(current_yaw) * request.left_m
             )
             target_yaw = wrap_to_pi(current_yaw + request.yaw_rad)
+            self._set_target_pose(response, target_x, target_y, target_yaw)
 
             distance = hypot(request.forward_m, request.left_m)
             if distance <= self.closed_loop_max_distance:
