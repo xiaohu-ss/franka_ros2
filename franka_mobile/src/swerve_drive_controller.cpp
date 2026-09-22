@@ -236,6 +236,12 @@ controller_interface::return_type SwerveDriveController::update_and_write_comman
   const Eigen::Vector3d cartesian_linear_velocity(command_linear_x, command_linear_y, 0.0);
   const Eigen::Vector3d cartesian_angular_velocity(0.0, 0.0, command_angular_z);
 
+  RCLCPP_INFO_THROTTLE(
+      logger, *get_node()->get_clock(), 500,
+      "Franka velocity command: forward_vx=%.3f m/s, left_vy=%.3f m/s, yaw_wz=%.3f rad/s",
+      cartesian_linear_velocity.x(), cartesian_linear_velocity.y(),
+      cartesian_angular_velocity.z());
+
   if (franka_cartesian_velocity_->setCommand(cartesian_linear_velocity,
                                              cartesian_angular_velocity)) {
     return controller_interface::return_type::OK;
