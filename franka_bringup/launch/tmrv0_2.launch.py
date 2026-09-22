@@ -231,7 +231,7 @@ def generate_robot_nodes(context):
                     'cmd_vel_topic': 'swerve_drive_controller/cmd_vel',
                     'cmd_vel_frame': 'base_link',
                     # Above this distance the move is handed to Nav2 instead.
-                    'closed_loop_max_distance': 0.5,
+                    'closed_loop_max_distance': 2.0,
                     'control_frequency': 50.0,
                     'kp_xy': 1.5,
                     'kp_yaw': 1.5,
