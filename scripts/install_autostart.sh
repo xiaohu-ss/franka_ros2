@@ -26,6 +26,9 @@ Type=simple
 User=tmr-user
 WorkingDirectory=${WORKSPACE_DIR}
 ExecStart=${START_SCRIPT}
+Environment=ROS_LOCALHOST_ONLY=0
+Environment=RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+Environment=CYCLONEDDS_URI=file:///home/tmr-user/cyclonedds/cyclonedds.xml
 Restart=on-failure
 RestartSec=5
 KillMode=control-group
