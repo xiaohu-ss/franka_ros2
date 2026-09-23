@@ -30,6 +30,11 @@ Restart=on-failure
 RestartSec=5
 KillMode=control-group
 TimeoutStopSec=30
+LimitRTPRIO=99
+LimitMEMLOCK=infinity
+LimitNICE=-20
+AmbientCapabilities=CAP_SYS_NICE
+CapabilityBoundingSet=CAP_SYS_NICE
 
 [Install]
 WantedBy=multi-user.target
