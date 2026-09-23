@@ -36,8 +36,8 @@ TimeoutStopSec=30
 LimitRTPRIO=99
 LimitMEMLOCK=infinity
 LimitNICE=-20
-AmbientCapabilities=CAP_SYS_NICE
-CapabilityBoundingSet=CAP_SYS_NICE
+AmbientCapabilities=CAP_SYS_NICE CAP_NET_RAW
+CapabilityBoundingSet=CAP_SYS_NICE CAP_NET_RAW
 
 [Install]
 WantedBy=multi-user.target
