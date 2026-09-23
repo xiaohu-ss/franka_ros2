@@ -6,16 +6,20 @@ LOG_DIR="${WORKSPACE_DIR}/logs"
 ROS_SETUP="/opt/ros/humble/setup.bash"
 WORKSPACE_SETUP="${WORKSPACE_DIR}/install/setup.bash"
 FRANKA_ROBOT_IP="172.16.16.10"
+SPINE_IP="tmr"
 FRANKA_WAIT_TIMEOUT=120
 
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 ROSBRIDGE_LOG="${LOG_DIR}/rosbridge_${TIMESTAMP}.log"
 TMR_LAUNCH_LOG="${LOG_DIR}/tmr_launch_${TIMESTAMP}.log"
+SPINE_LAUNCH_LOG="${LOG_DIR}/spine_launch_${TIMESTAMP}.log"
 ROSBRIDGE_PID_FILE="${LOG_DIR}/rosbridge.pid"
 TMR_LAUNCH_PID_FILE="${LOG_DIR}/tmr_launch.pid"
+SPINE_LAUNCH_PID_FILE="${LOG_DIR}/spine_launch.pid"
 
 ROSBRIDGE_PID=""
 TMR_LAUNCH_PID=""
+SPINE_LAUNCH_PID=""
 
 cleanup() {
   set +e
@@ -28,10 +32,15 @@ cleanup() {
     kill "${TMR_LAUNCH_PID}"
   fi
 
+  if [[ -n "${SPINE_LAUNCH_PID}" ]] && kill -0 "${SPINE_LAUNCH_PID}" 2>/dev/null; then
+    kill "${SPINE_LAUNCH_PID}"
+  fi
+
   wait "${ROSBRIDGE_PID}" 2>/dev/null
   wait "${TMR_LAUNCH_PID}" 2>/dev/null
+  wait "${SPINE_LAUNCH_PID}" 2>/dev/null
 
-  rm -f "${ROSBRIDGE_PID_FILE}" "${TMR_LAUNCH_PID_FILE}"
+  rm -f "${ROSBRIDGE_PID_FILE}" "${TMR_LAUNCH_PID_FILE}" "${SPINE_LAUNCH_PID_FILE}"
 }
 
 handle_signal() {
@@ -83,6 +92,13 @@ ros2 run rosbridge_server rosbridge_websocket \
 ROSBRIDGE_PID="$!"
 echo "${ROSBRIDGE_PID}" >"${ROSBRIDGE_PID_FILE}"
 
+echo "Starting Spine bringup. Log: ${SPINE_LAUNCH_LOG}"
+ros2 launch franka_spine_server spine.launch.py \
+  spine_ip:="${SPINE_IP}" \
+  >"${SPINE_LAUNCH_LOG}" 2>&1 &
+SPINE_LAUNCH_PID="$!"
+echo "${SPINE_LAUNCH_PID}" >"${SPINE_LAUNCH_PID_FILE}"
+
 echo "Starting TMR Nav2 bringup. Log: ${TMR_LAUNCH_LOG}"
 ros2 launch franka_bringup tmrv0_2.launch.py \
   robot_config_file:=tmr.config.yaml \
@@ -94,9 +110,10 @@ echo "${TMR_LAUNCH_PID}" >"${TMR_LAUNCH_PID_FILE}"
 
 echo "rosbridge_server pid: ${ROSBRIDGE_PID}"
 echo "tmr launch pid: ${TMR_LAUNCH_PID}"
+echo "spine launch pid: ${SPINE_LAUNCH_PID}"
 
 set +e
-wait -n "${ROSBRIDGE_PID}" "${TMR_LAUNCH_PID}"
+wait -n "${ROSBRIDGE_PID}" "${TMR_LAUNCH_PID}" "${SPINE_LAUNCH_PID}"
 EXIT_CODE="$?"
 set -e
 
