@@ -53,8 +53,10 @@ if [[ ! -f "${WORKSPACE_SETUP}" ]]; then
   exit 1
 fi
 
+set +u
 source "${ROS_SETUP}"
 source "${WORKSPACE_SETUP}"
+set -u
 
 cd "${WORKSPACE_DIR}"
 
