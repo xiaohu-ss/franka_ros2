@@ -5,6 +5,8 @@ WORKSPACE_DIR="/home/tmr-user/ros2_ws"
 LOG_DIR="${WORKSPACE_DIR}/logs"
 ROS_SETUP="/opt/ros/humble/setup.bash"
 WORKSPACE_SETUP="${WORKSPACE_DIR}/install/setup.bash"
+FRANKA_ROBOT_IP="172.16.16.10"
+FRANKA_WAIT_TIMEOUT=120
 
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 ROSBRIDGE_LOG="${LOG_DIR}/rosbridge_${TIMESTAMP}.log"
@@ -59,6 +61,17 @@ source "${WORKSPACE_SETUP}"
 set -u
 
 cd "${WORKSPACE_DIR}"
+
+echo "Waiting for Franka robot at ${FRANKA_ROBOT_IP}..."
+FRANKA_WAIT_DEADLINE=$((SECONDS + FRANKA_WAIT_TIMEOUT))
+until ping -c1 -W1 "${FRANKA_ROBOT_IP}" >/dev/null 2>&1; do
+  if (( SECONDS >= FRANKA_WAIT_DEADLINE )); then
+    echo "Timed out waiting for Franka robot at ${FRANKA_ROBOT_IP}" >&2
+    exit 1
+  fi
+  sleep 2
+done
+echo "Franka robot is reachable at ${FRANKA_ROBOT_IP}."
 
 echo "Starting rosbridge_server. Log: ${ROSBRIDGE_LOG}"
 ros2 run rosbridge_server rosbridge_websocket \
