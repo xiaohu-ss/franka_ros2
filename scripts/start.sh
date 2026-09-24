@@ -21,20 +21,29 @@ ROSBRIDGE_PID=""
 TMR_LAUNCH_PID=""
 SPINE_LAUNCH_PID=""
 
+stop_process_group() {
+  local pid="$1"
+
+  if [[ -n "${pid}" ]] && kill -0 "${pid}" 2>/dev/null; then
+    kill -- "-${pid}" 2>/dev/null
+  fi
+}
+
+stop_stale_managed_processes() {
+  pkill -TERM -f 'rosbridge_server/rosbridge_websocket' 2>/dev/null
+  pkill -TERM -f 'rosbridge_server rosbridge_websocket' 2>/dev/null
+  pkill -TERM -f 'franka_spine_server spine.launch.py' 2>/dev/null
+  pkill -TERM -f 'spine_action_server_node.py' 2>/dev/null
+  pkill -TERM -f 'franka_bringup tmrv0_2.launch.py' 2>/dev/null
+  sleep 1
+}
+
 cleanup() {
   set +e
 
-  if [[ -n "${ROSBRIDGE_PID}" ]] && kill -0 "${ROSBRIDGE_PID}" 2>/dev/null; then
-    kill "${ROSBRIDGE_PID}"
-  fi
-
-  if [[ -n "${TMR_LAUNCH_PID}" ]] && kill -0 "${TMR_LAUNCH_PID}" 2>/dev/null; then
-    kill "${TMR_LAUNCH_PID}"
-  fi
-
-  if [[ -n "${SPINE_LAUNCH_PID}" ]] && kill -0 "${SPINE_LAUNCH_PID}" 2>/dev/null; then
-    kill "${SPINE_LAUNCH_PID}"
-  fi
+  stop_process_group "${ROSBRIDGE_PID}"
+  stop_process_group "${TMR_LAUNCH_PID}"
+  stop_process_group "${SPINE_LAUNCH_PID}"
 
   wait "${ROSBRIDGE_PID}" 2>/dev/null
   wait "${TMR_LAUNCH_PID}" 2>/dev/null
@@ -82,8 +91,11 @@ until ping -c1 -W1 "${FRANKA_ROBOT_IP}" >/dev/null 2>&1; do
 done
 echo "Franka robot is reachable at ${FRANKA_ROBOT_IP}."
 
+echo "Stopping stale managed rosbridge/spine/TMR processes, if any."
+stop_stale_managed_processes
+
 echo "Starting rosbridge_server. Log: ${ROSBRIDGE_LOG}"
-ros2 run rosbridge_server rosbridge_websocket \
+setsid ros2 run rosbridge_server rosbridge_websocket \
   --ros-args \
   -p address:=0.0.0.0 \
   -p port:=9090 \
@@ -93,14 +105,14 @@ ROSBRIDGE_PID="$!"
 echo "${ROSBRIDGE_PID}" >"${ROSBRIDGE_PID_FILE}"
 
 echo "Starting Spine bringup. Log: ${SPINE_LAUNCH_LOG}"
-ros2 launch franka_spine_server spine.launch.py \
+setsid ros2 launch franka_spine_server spine.launch.py \
   spine_ip:="${SPINE_IP}" \
   >"${SPINE_LAUNCH_LOG}" 2>&1 &
 SPINE_LAUNCH_PID="$!"
 echo "${SPINE_LAUNCH_PID}" >"${SPINE_LAUNCH_PID_FILE}"
 
 echo "Starting TMR Nav2 bringup. Log: ${TMR_LAUNCH_LOG}"
-ros2 launch franka_bringup tmrv0_2.launch.py \
+setsid ros2 launch franka_bringup tmrv0_2.launch.py \
   robot_config_file:=tmr.config.yaml \
   controller_name:=swerve_drive_controller \
   use_nav2:=true \
