@@ -30,11 +30,11 @@ stop_process_group() {
 }
 
 stop_stale_managed_processes() {
-  pkill -TERM -f 'rosbridge_server/rosbridge_websocket' 2>/dev/null
-  pkill -TERM -f 'rosbridge_server rosbridge_websocket' 2>/dev/null
-  pkill -TERM -f 'franka_spine_server spine.launch.py' 2>/dev/null
-  pkill -TERM -f 'spine_action_server_node.py' 2>/dev/null
-  pkill -TERM -f 'franka_bringup tmrv0_2.launch.py' 2>/dev/null
+  pkill -TERM -f 'rosbridge_server/rosbridge_websocket' 2>/dev/null || true
+  pkill -TERM -f 'rosbridge_server rosbridge_websocket' 2>/dev/null || true
+  pkill -TERM -f 'franka_spine_server spine.launch.py' 2>/dev/null || true
+  pkill -TERM -f 'spine_action_server_node.py' 2>/dev/null || true
+  pkill -TERM -f 'franka_bringup tmrv0_2.launch.py' 2>/dev/null || true
   sleep 1
 }
 
