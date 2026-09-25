@@ -313,3 +313,8 @@ ros2 service call /nav2_relative_move_server/relative_move \
     controller output:
         ros2 topic echo /swerve_drive_controller/cmd_vel_out
     ```
+
+    4. kill command:
+    ```
+    kill -TERM pid
+    ```
